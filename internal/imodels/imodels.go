@@ -7,6 +7,7 @@ import (
 
 	"github.com/google/osv-scalibr/enricher/vulnmatch/osvutil"
 	"github.com/google/osv-scalibr/extractor"
+	"github.com/google/osv-scalibr/extractor/filesystem/language/python/requirements"
 	apkmetadata "github.com/google/osv-scalibr/extractor/filesystem/os/apk/metadata"
 	dpkgmetadata "github.com/google/osv-scalibr/extractor/filesystem/os/dpkg/metadata"
 	rpmmetadata "github.com/google/osv-scalibr/extractor/filesystem/os/rpm/metadata"
@@ -99,13 +100,14 @@ func PackageInfo(p *extractor.Package) models.PackageInfo {
 	parsedPkg := ParsePackage(p)
 
 	pi := models.PackageInfo{
-		Name:          parsedPkg.Name,
-		Version:       parsedPkg.Version,
-		Ecosystem:     parsedPkg.Ecosystem.String(),
-		OSPackageName: osPackageName(p),
-		Commit:        parsedPkg.Commit,
-		Deprecated:    p.Deprecated,
-		Inventory:     p,
+		Name:             parsedPkg.Name,
+		Version:          parsedPkg.Version,
+		VersionSpecifier: versionSpecifier(p),
+		Ecosystem:        parsedPkg.Ecosystem.String(),
+		OSPackageName:    osPackageName(p),
+		Commit:           parsedPkg.Commit,
+		Deprecated:       p.Deprecated,
+		Inventory:        p,
 	}
 
 	if packageURL := p.PURL(); packageURL != nil {
@@ -119,4 +121,45 @@ func PackageInfo(p *extractor.Package) models.PackageInfo {
 	}
 
 	return pi
+}
+
+// versionSpecifier returns the original requirements.txt operator and version,
+// such as "==4.2" or "~=4.2".
+//
+// Transitive resolution overwrites Package.Version with a concrete release and
+// leaves Metadata.Requirement unchanged, so the specifier is taken from the
+// requirement instead of the current version.
+func versionSpecifier(pkg *extractor.Package) string {
+	meta, ok := pkg.Metadata.(*requirements.Metadata)
+	if !ok || meta.VersionComparator == "" {
+		return ""
+	}
+
+	return specifierFromRequirement(meta.Requirement, meta.VersionComparator)
+}
+
+// specifierFromRequirement returns comparator plus the version that follows it
+// in a requirements.txt requirement. Environment markers and trailing tokens
+// are dropped, and whitespace around the version is removed.
+func specifierFromRequirement(requirement, comparator string) string {
+	req := strings.TrimSpace(requirement)
+	if req == "" || comparator == "" {
+		return ""
+	}
+
+	_, version, ok := strings.Cut(req, comparator)
+	if !ok {
+		return ""
+	}
+
+	version, _, _ = strings.Cut(version, ";")
+	version = strings.TrimSpace(version)
+	if cut := strings.IndexAny(version, " \t"); cut >= 0 {
+		version = strings.TrimSpace(version[:cut])
+	}
+	if version == "" {
+		return ""
+	}
+
+	return comparator + version
 }
