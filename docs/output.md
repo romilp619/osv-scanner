@@ -270,6 +270,19 @@ osv-scanner scan --format json -L path/to/lockfile > /path/to/file.json
 
 </details>
 
+Packages extracted from a `requirements.txt` include `version_specifier` when the file records a comparison operator. `version` stays the bare version used for vulnerability matching: the lower bound of a range, or the resolved version when transitive resolution succeeds. `version_specifier` is the original operator and version, with surrounding whitespace removed, so an exact pin can be told apart from a range.
+
+```json
+{
+  "name": "django",
+  "version": "4.2",
+  "version_specifier": "~=4.2",
+  "ecosystem": "PyPI"
+}
+```
+
+`django==4.2` is reported with `"version_specifier": "==4.2"`. A compatible release (`~=`) or range (`>=`, `<=`) keeps that operator. The field is omitted for packages that have no recorded comparator, including lockfiles and requirements the extractor cannot represent (such as `!=` or multiple constraints).
+
 ---
 
 ### SARIF

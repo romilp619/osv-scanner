@@ -349,13 +349,19 @@ type AnalysisInfo struct {
 }
 
 type PackageInfo struct {
-	Name          string              `json:"name"`
-	OSPackageName string              `json:"os_package_name,omitempty"`
-	Version       string              `json:"version"`
-	Ecosystem     string              `json:"ecosystem"`
-	PURL          string              `json:"purl,omitempty"`
-	Commit        string              `json:"commit,omitempty"`
-	Deprecated    bool                `json:"deprecated,omitempty"`
-	ImageOrigin   *ImageOriginDetails `json:"image_origin_details,omitempty"`
-	Inventory     *extractor.Package  `json:"-"`
+	Name          string `json:"name"`
+	OSPackageName string `json:"os_package_name,omitempty"`
+	Version       string `json:"version"`
+	// VersionSpecifier is the original requirements.txt operator and version,
+	// for example "==4.2", "~=4.2", or ">=1.0".
+	// Version stays the bare version used for vulnerability matching, which may
+	// be a range lower bound or a concrete version after transitive resolution.
+	// Omitted when the package has no recorded comparator.
+	VersionSpecifier string              `json:"version_specifier,omitempty"`
+	Ecosystem        string              `json:"ecosystem"`
+	PURL             string              `json:"purl,omitempty"`
+	Commit           string              `json:"commit,omitempty"`
+	Deprecated       bool                `json:"deprecated,omitempty"`
+	ImageOrigin      *ImageOriginDetails `json:"image_origin_details,omitempty"`
+	Inventory        *extractor.Package  `json:"-"`
 }
